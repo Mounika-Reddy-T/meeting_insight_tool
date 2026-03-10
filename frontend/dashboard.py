@@ -12,7 +12,7 @@ st.title("AI Document Analyzer")
 
 st.write(
     "Paste a long document, meeting transcript, or notes. "
-    "The system will summarize it and extract tasks and decisions."
+    "The system will summarize it and extract tasks, decisions, risks, and priorities."
 )
 
 st.caption("Tip: Include speaker names and clear meeting context for better extraction quality.")
@@ -64,7 +64,7 @@ if analyze:
 
         st.success("Analysis completed")
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
 
         with col1:
             st.metric("Prompt Tokens", result["prompt_tokens"])
@@ -78,10 +78,16 @@ if analyze:
         with col4:
             st.metric("Key Decisions", len(result.get("key_decisions", [])))
 
+        with col5:
+            st.metric("Risks", len(result.get("risks", [])))
+
+        with col6:
+            st.metric("Priority Tasks", len(result.get("priority_tasks", [])))
+
         st.divider()
 
-        summary_tab, actions_tab, decisions_tab = st.tabs(
-            ["Summary", "Action Items", "Key Decisions"]
+        summary_tab, actions_tab, decisions_tab, risks_tab, priorities_tab = st.tabs(
+            ["Summary", "Action Items", "Key Decisions", "Risks", "Priority Tasks"]
         )
 
         with summary_tab:
@@ -100,4 +106,18 @@ if analyze:
                 title="Key Decisions",
                 items=result.get("key_decisions", []),
                 empty_message="No decisions detected",
+            )
+
+        with risks_tab:
+            render_items(
+                title="Risks",
+                items=result.get("risks", []),
+                empty_message="No risks detected",
+            )
+
+        with priorities_tab:
+            render_items(
+                title="Priority Tasks",
+                items=result.get("priority_tasks", []),
+                empty_message="No priority tasks detected",
             )

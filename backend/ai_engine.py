@@ -27,7 +27,10 @@ def _clean_list_item(line: str) -> str:
 
 
 def _extract_section_items(message: str, heading: str) -> list[str]:
-    pattern = rf"(?is){heading}\s*:?\s*(.+?)(?=\n\s*(Summary|Action Items|Key Decisions)\s*:?\s*|\Z)"
+    pattern = (
+        rf"(?is){heading}\s*:?\s*(.+?)"
+        r"(?=\n\s*(Summary|Action Items|Key Decisions|Risks|Priority Tasks)\s*:?\s*|\Z)"
+    )
     match = re.search(pattern, message)
     if not match:
         return []
@@ -46,7 +49,10 @@ def _extract_section_items(message: str, heading: str) -> list[str]:
 
 
 def _extract_summary(message: str) -> str:
-    pattern = r"(?is)Summary\s*:?\s*(.+?)(?=\n\s*(Action Items|Key Decisions)\s*:?\s*|\Z)"
+    pattern = (
+        r"(?is)Summary\s*:?\s*(.+?)"
+        r"(?=\n\s*(Action Items|Key Decisions|Risks|Priority Tasks)\s*:?\s*|\Z)"
+    )
     match = re.search(pattern, message)
     if match:
         return match.group(1).strip()
@@ -61,12 +67,16 @@ def _parse_model_output(message: str) -> dict:
             "summary": str(parsed.get("summary", "")).strip(),
             "action_items": [str(x).strip() for x in parsed.get("action_items", []) if str(x).strip()],
             "key_decisions": [str(x).strip() for x in parsed.get("key_decisions", []) if str(x).strip()],
+            "risks": [str(x).strip() for x in parsed.get("risks", []) if str(x).strip()],
+            "priority_tasks": [str(x).strip() for x in parsed.get("priority_tasks", []) if str(x).strip()],
         }
     except json.JSONDecodeError:
         return {
             "summary": _extract_summary(cleaned),
             "action_items": _extract_section_items(cleaned, "Action Items"),
             "key_decisions": _extract_section_items(cleaned, "Key Decisions"),
+            "risks": _extract_section_items(cleaned, "Risks"),
+            "priority_tasks": _extract_section_items(cleaned, "Priority Tasks"),
         }
 
 
@@ -83,9 +93,10 @@ async def generate_insights(text: str):
             {
                 "role": "system",
                 "content": (
-                    "You analyze documents and extract summary, action items, and key decisions. "
+                    "You analyze documents and extract summary, action items, key decisions, risks, and priority tasks. "
                     "Return only valid JSON with exactly these keys: "
-                    "summary (string), action_items (array of strings), key_decisions (array of strings). "
+                    "summary (string), action_items (array of strings), key_decisions (array of strings), "
+                    "risks (array of strings), priority_tasks (array of strings). "
                     "Do not include markdown or extra text."
                 ),
             },
@@ -126,6 +137,8 @@ async def generate_insights(text: str):
         "summary": parsed.get("summary", ""),
         "action_items": parsed.get("action_items", []),
         "key_decisions": parsed.get("key_decisions", []),
+        "risks": parsed.get("risks", []),
+        "priority_tasks": parsed.get("priority_tasks", []),
         "prompt_tokens": usage.get("prompt_tokens", 0),
         "completion_tokens": usage.get("completion_tokens", 0),
     }
